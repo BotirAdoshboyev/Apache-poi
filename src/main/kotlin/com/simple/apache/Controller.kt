@@ -4,9 +4,12 @@ import org.apache.poi.ss.util.CellUtil.createCell
 import org.apache.poi.xssf.usermodel.XSSFCellStyle
 import org.apache.poi.xssf.usermodel.XSSFFont
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.http.*
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RestController
-import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
+import java.util.*
 
 data class Dto(
     var id: Long,
@@ -31,8 +34,8 @@ fun getItems(): List<Dto>{
 }
 @RestController
 class Controller {
-    @GetMapping
-    fun get(){
+    @PostMapping
+    fun post() : ResponseEntity<ByteArray>{
         var rowIndex = 1
         val list = getItems()
 
@@ -107,20 +110,34 @@ class Controller {
         footerNewCell.cellStyle = boldCellStyle
         val footerReadyCell = createCell(footerRow, 4, totalOfReady.toString())
         footerReadyCell.cellStyle = boldCellStyle
-        val footerIssueCell = createCell(footerRow, 5, totalOfNew.toString())
+        val footerIssueCell = createCell(footerRow, 5, totalOfIssue.toString())
         footerIssueCell.cellStyle = boldCellStyle
         val footerPrintCell = createCell(footerRow, 6, totalOfPrint.toString())
         footerPrintCell.cellStyle = boldCellStyle
 
-        for (i in 0..6){
-            xlWS.autoSizeColumn(i)
+//        for (i in 0..6){
+//            xlWS.autoSizeColumn(i)
+//        }
+
+        xlWS.autoSizeColumn(0)
+        xlWS.autoSizeColumn(1)
+        xlWS.autoSizeColumn(2)
+        xlWS.autoSizeColumn(3)
+        xlWS.autoSizeColumn(4)
+        xlWS.autoSizeColumn(5)
+        xlWS.autoSizeColumn(6)
+        xlWS.createFreezePane(0, 1)
+        val byteArrayOS = ByteArrayOutputStream()
+        xlWB.write(byteArrayOS)
+        xlWB.close()
+
+
+        val headers = HttpHeaders().apply {
+            contentType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8")
+            contentDisposition = ContentDisposition.builder("inline").filename("test.xlsx").build()
+            contentLength = byteArrayOS.size().toLong()
         }
 
-        xlWS.createFreezePane(0, 1)
-
-        val fileOS = FileOutputStream("file.xlsx")
-        xlWB.write(fileOS)
-        fileOS.close()
-        xlWB.close()
+        return ResponseEntity(byteArrayOS.toByteArray(), headers, HttpStatus.OK)
     }
 }
